@@ -78,7 +78,7 @@ export default function ProfileModal({ isOpen, onClose, totalSIPs, totalInvested
     };
 
     // Calculate total SIP investment
-    const SIP_CONTRACT_ADDRESS = '0xd8540A08f770BAA3b66C4d43728CDBDd1d7A9c3b';
+    const SIP_CONTRACT_ADDRESS = '0x094bf41C9aD82016972F3Ae0F3aE5Ab217174a95';
     const sipTransactions = transactions.filter(tx =>
         tx.to.id.toLowerCase() === SIP_CONTRACT_ADDRESS.toLowerCase() &&
         tx.from.id.toLowerCase() === address?.toLowerCase()

@@ -43,6 +43,12 @@ export default function CryptoPriceModal({ isOpen, onClose }: CryptoPriceModalPr
             const response = await axios.get("/api/crypto-prices");
 
             const allCoins = response.data;
+
+            // The API may return an error object instead of an array
+            if (!Array.isArray(allCoins)) {
+                throw new Error(allCoins?.error || 'Invalid response from price API');
+            }
+
             setCryptoData(allCoins);
             setFilteredData(allCoins);
             setError("");

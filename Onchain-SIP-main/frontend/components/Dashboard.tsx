@@ -3,7 +3,6 @@
 import { useAccount, useBalance } from "wagmi";
 import { useState, useEffect } from "react";
 import { formatEther } from "viem";
-import { useSIPContract } from "../hooks/useSIPContract";
 
 interface DashboardProps {
     isOpen: boolean;
@@ -13,9 +12,11 @@ interface DashboardProps {
     activeSIPs: Array<{
         id: string;
         tokenName: string;
-        amount: string;
-        frequency: string;
+        totalInvested: string;
+        currentValue: string;
+        progress: number;
         nextExecution: string;
+        status: string;
     }>;
 }
 
@@ -25,32 +26,6 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
     const [copiedAddress, setCopiedAddress] = useState(false);
     const [transactions, setTransactions] = useState<any[]>([]);
     const [loadingTransactions, setLoadingTransactions] = useState(false);
-
-    // Fetch SIP data from smart contract
-    const { useGetAllUserSIPs } = useSIPContract();
-    const { allSIPs, isLoading: sipsLoading } = useGetAllUserSIPs(address);
-
-    // Helper function to convert frequency in seconds to human-readable label
-    const getFrequencyLabel = (frequencySeconds: bigint): string => {
-        const seconds = Number(frequencySeconds);
-        const days = seconds / (24 * 3600);
-
-        if (days >= 30) return `${Math.floor(days / 30)} Month${Math.floor(days / 30) > 1 ? 's' : ''}`;
-        if (days >= 7) return `${Math.floor(days / 7)} Week${Math.floor(days / 7) > 1 ? 's' : ''}`;
-        if (days >= 1) return `${Math.floor(days)} Day${Math.floor(days) > 1 ? 's' : ''}`;
-        return `${Math.floor(seconds / 3600)} Hour${Math.floor(seconds / 3600) > 1 ? 's' : ''}`;
-    };
-
-    // Helper function to calculate investment duration
-    const getDuration = (maturityTimestamp: bigint, nextExecution: bigint): string => {
-        const maturity = new Date(Number(maturityTimestamp) * 1000);
-        const start = new Date(Number(nextExecution) * 1000);
-        const durationMs = maturity.getTime() - start.getTime();
-        const months = Math.floor(durationMs / (30 * 24 * 60 * 60 * 1000));
-
-        if (months >= 12) return `${Math.floor(months / 12)} Year${Math.floor(months / 12) > 1 ? 's' : ''}`;
-        return `${months} Month${months > 1 ? 's' : ''}`;
-    };
 
     // Fetch transaction history
     useEffect(() => {
@@ -84,7 +59,7 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
     };
 
     // Calculate total SIP investment from transactions
-    const SIP_CONTRACT_ADDRESS = '0xd8540A08f770BAA3b66C4d43728CDBDd1d7A9c3b';
+    const SIP_CONTRACT_ADDRESS = '0x094bf41C9aD82016972F3Ae0F3aE5Ab217174a95';
     const sipTransactions = transactions.filter(tx =>
         tx.to.id.toLowerCase() === SIP_CONTRACT_ADDRESS.toLowerCase() &&
         tx.from.id.toLowerCase() === address?.toLowerCase()
@@ -96,29 +71,22 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
     const totalNetWorth = netWorth + totalSIPInvestment;
     const netWorthDisplay = totalNetWorth.toFixed(4);
 
-    // Transform contract SIP data into displayable SIP cards
-    // Fallback to transaction-based cards if contract data is unavailable
-    const sipCards = allSIPs.length > 0 ? allSIPs.map((sip) => {
-        const totalAmount = formatEther(sip.totalAmount);
-        const executedAmount = formatEther(sip.executedAmount);
-        const progress = (Number(executedAmount) / Number(totalAmount)) * 100;
-        const nextExecution = new Date(Number(sip.nextExecution) * 1000);
-        const frequency = getFrequencyLabel(sip.frequency);
-        const duration = getDuration(sip.maturity, sip.nextExecution);
-
+    // Transform activeSIPs prop into displayable SIP cards
+    // Fallback to transaction-based cards if prop data is unavailable
+    const sipCards = activeSIPs.length > 0 ? activeSIPs.map((sip) => {
         return {
-            id: sip.poolName,
-            tokenName: 'AVAX',
-            totalAmount: `${parseFloat(totalAmount).toFixed(4)} AVAX`,
-            amountPerInterval: `${parseFloat(formatEther(sip.amountPerInterval)).toFixed(4)} AVAX`,
-            frequency: frequency,
-            duration: duration,
-            progress: progress,
-            nextExecution: nextExecution.toLocaleDateString(),
-            executedAmount: `${parseFloat(executedAmount).toFixed(4)} AVAX`,
+            id: sip.id,
+            tokenName: sip.tokenName || 'AVAX',
+            totalAmount: `${sip.totalInvested} AVAX`,
+            amountPerInterval: `${sip.currentValue} AVAX`,
+            frequency: sip.nextExecution,
+            duration: 'N/A',
+            progress: sip.progress,
+            nextExecution: sip.nextExecution,
+            executedAmount: `${sip.currentValue} AVAX`,
             isContractBased: true
         };
-    }) : sipTransactions.map((tx, index) => {
+    }) : sipTransactions.map((tx: any, index: number) => {
         // Fallback: Use transaction data when contract data is unavailable
         const value = parseFloat(tx.value) / 1e18;
         const date = new Date(tx.timestamp);
@@ -244,7 +212,7 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
                             </span>
                         </div>
 
-                        {(loadingTransactions || sipsLoading) ? (
+                        {loadingTransactions ? (
                             <div className="text-center py-12">
                                 <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-500 mb-4"></div>
                                 <p className="text-slate-400 text-lg">Loading SIPs...</p>

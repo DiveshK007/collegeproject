@@ -30,12 +30,9 @@ export default function Home() {
   const { isConnected, address } = useAccount();
   const chainId = useChainId();
 
-  // Force use of recovered pool name for this session
-  const RECOVERED_POOL = 'sip_ECE386_1756552715';
-
   const [isHydrated, setIsHydrated] = useState(false);
   const [showSIPForm, setShowSIPForm] = useState(false);
-  const [currentPool, setCurrentPool] = useState(RECOVERED_POOL);
+  const [currentPool, setCurrentPool] = useState("");
   const [txStatus, setTxStatus] = useState("");
   const [selectedSIPPool, setSelectedSIPPool] = useState<string>("");
 
@@ -76,19 +73,14 @@ export default function Home() {
     setIsHydrated(true);
   }, []);
 
-  // Generate unique pool name for new SIPs
+  // Generate unique pool name for new SIPs — always generate a fresh one
+  // Generate when the form opens so the hook has the correct pool name
   useEffect(() => {
-    if (address && !hasActiveSIPs) {
-      let pool = currentPool;
-      if (!pool || pool === 'default') {
-        pool = generatePoolName(address, Date.now());
-        setCurrentPool(pool);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('onchain_sip_last_pool', pool);
-        }
-      }
+    if (address && showSIPForm) {
+      const pool = generatePoolName(address, Date.now());
+      setCurrentPool(pool);
     }
-  }, [address, hasActiveSIPs]);
+  }, [address, showSIPForm]);
 
   const validateInputs = () => {
     if (totalInvestment < 0.2) return "Minimum investment is 0.2 AVAX";
@@ -185,15 +177,13 @@ export default function Home() {
     executeSIP,
     isLoading: executeLoading,
     isSuccess: executeSuccess,
-    canExecute: canExecuteContract
-  } = useExecuteSIP(selectedSIPPool);
+  } = useExecuteSIP();
 
   const {
     finalizeSIP,
     isLoading: finalizeLoading,
     isSuccess: finalizeSuccess,
-    canFinalize: canFinalizeContract
-  } = useFinalizeSIP(selectedSIPPool);
+  } = useFinalizeSIP();
 
   const handleCreateSIP = async () => {
     const error = validateInputs();
@@ -209,14 +199,10 @@ export default function Home() {
 
     try {
       setTxStatus("Creating SIP plan...");
-      // Only generate a new pool name if there are already active SIPs
-      let pool = currentPool;
-      if (hasActiveSIPs) {
-        pool = generatePoolName(address || "", Date.now());
-        setCurrentPool(pool);
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('onchain_sip_last_pool', pool);
-        }
+      // Pool name was already set when the form opened (useEffect on showSIPForm)
+      // so the hook already has the correct pool name
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('onchain_sip_last_pool', currentPool);
       }
       createSIP?.();
     } catch (err) {
@@ -227,11 +213,11 @@ export default function Home() {
   };
 
   const handleExecuteSIP = async (poolName: string) => {
-    if (!canExecuteContract) return;
+    if (!poolName) return;
     try {
       setSelectedSIPPool(poolName);
       setTxStatus("Executing SIP interval...");
-      executeSIP?.();
+      executeSIP?.(poolName);
     } catch (err) {
       console.error("Error executing SIP:", err);
       setTxStatus("");
@@ -239,11 +225,11 @@ export default function Home() {
   };
 
   const handleFinalizeSIP = async (poolName: string) => {
-    if (!canFinalizeContract) return;
+    if (!poolName) return;
     try {
       setSelectedSIPPool(poolName);
       setTxStatus("Finalizing SIP...");
-      finalizeSIP?.();
+      finalizeSIP?.(poolName);
     } catch (err) {
       console.error("Error finalizing SIP:", err);
       setTxStatus("");
@@ -440,7 +426,7 @@ export default function Home() {
                   Please switch to Avalanche Fuji Testnet to use OnchainSIP
                 </p>
                 <p className="text-red-300 text-sm mt-2">
-                  Contract Address: 0xd8540A08f770BAA3b66C4d43728CDBDd1d7A9c3b
+                  Contract Address: 0x094bf41C9aD82016972F3Ae0F3aE5Ab217174a95
                 </p>
               </div>
             )}
