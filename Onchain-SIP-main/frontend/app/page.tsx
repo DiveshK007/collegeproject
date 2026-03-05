@@ -648,7 +648,7 @@ export default function Home() {
               currentValue: formatted?.executedAmount || "0",
               progress: formatted?.progress || 0,
               nextExecution: formatted?.nextExecution?.toLocaleDateString() || "N/A",
-              status: "active" as const
+              status: sip.active ? "active" : "completed"
             };
           })}
         />
@@ -663,16 +663,45 @@ export default function Home() {
           isOpen={showManageSIP}
           onClose={() => setShowManageSIP(false)}
           totalValue={totalPortfolioValue}
+          onExecute={handleExecuteSIP}
+          onFinalize={handleFinalizeSIP}
+          executeLoading={executeLoading}
+          finalizeLoading={finalizeLoading}
+          selectedPool={selectedSIPPool}
           activeSIPs={finalSIPs.map((sip, index) => {
             const formatted = formatSIPData(sip);
+            const totalAmt = Number(sip.totalAmount);
+            const executedAmt = Number(sip.executedAmount);
+            const perInterval = Number(sip.amountPerInterval);
+            const installmentsDone = perInterval > 0 ? Math.floor(executedAmt / perInterval) : 0;
+            const totalInstallments = perInterval > 0 ? Math.floor(totalAmt / perInterval) : 0;
+            const frequencySeconds = Number(sip.frequency);
+            const frequencyDays = frequencySeconds / (24 * 3600);
+
+            let frequencyLabel = 'Custom';
+            if (frequencyDays >= 365) frequencyLabel = 'Yearly';
+            else if (frequencyDays >= 90) frequencyLabel = 'Quarterly';
+            else if (frequencyDays >= 28) frequencyLabel = 'Monthly';
+            else if (frequencyDays >= 7) frequencyLabel = 'Weekly';
+            else if (frequencyDays >= 1) frequencyLabel = 'Daily';
+
             return {
               id: sip.poolName || `sip-${index}`,
               tokenName: "AVAX",
-              totalInvested: formatted?.totalAmount || "0",
-              currentValue: formatted?.executedAmount || "0",
+              totalAmount: formatted?.totalAmount || "0",
+              executedAmount: formatted?.executedAmount || "0",
+              remainingAmount: formatted?.remainingAmount || "0",
+              amountPerInterval: formatted?.amountPerInterval || "0",
+              installmentsDone,
+              totalInstallments,
+              remainingInstallments: totalInstallments - installmentsDone,
+              frequencyLabel,
               progress: formatted?.progress || 0,
               nextExecution: formatted?.nextExecution?.toLocaleDateString() || "N/A",
-              status: "active" as const
+              maturityDate: formatted?.maturity?.toLocaleDateString() || "N/A",
+              active: sip.active,
+              canExecute: formatted?.canExecute || false,
+              canFinalize: formatted?.canFinalize || false,
             };
           })}
         />

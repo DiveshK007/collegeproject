@@ -47,10 +47,10 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
             }
         };
 
-        if (address) {
+        if (isOpen && address) {
             fetchTransactions();
         }
-    }, [address]);
+    }, [isOpen, address]);
 
     const copyToClipboard = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -61,8 +61,8 @@ export default function Dashboard({ isOpen, onClose, totalSIPs, totalInvested, a
     // Calculate total SIP investment from transactions
     const SIP_CONTRACT_ADDRESS = '0x094bf41C9aD82016972F3Ae0F3aE5Ab217174a95';
     const sipTransactions = transactions.filter(tx =>
-        tx.to.id.toLowerCase() === SIP_CONTRACT_ADDRESS.toLowerCase() &&
-        tx.from.id.toLowerCase() === address?.toLowerCase()
+        tx.to?.id?.toLowerCase() === SIP_CONTRACT_ADDRESS.toLowerCase() &&
+        tx.from?.id?.toLowerCase() === address?.toLowerCase()
     );
     const totalSIPInvestment = sipTransactions.reduce((sum, tx) => sum + (parseFloat(tx.value) / 1e18), 0);
 

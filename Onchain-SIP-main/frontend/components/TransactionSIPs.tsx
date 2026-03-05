@@ -128,7 +128,7 @@ export default function TransactionSIPs({
                             maturity: new Date(maturityTime).toLocaleDateString(),
                             frequency: `Every ${Math.floor(frequencySec / (24 * 3600))} days`,
                             frequencyLabel: getFrequencyLabel(frequencySec),
-                            canExecute: planData.active && now >= nextExecTime && now < maturityTime,
+                            canExecute: planData.active && now >= nextExecTime && now < maturityTime && (executedAmt + BigInt(planData.amountPerInterval) <= total),
                             canFinalize: planData.active && now >= maturityTime,
                             active: planData.active,
                             progress,

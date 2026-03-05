@@ -654,9 +654,14 @@ export const formatSIPData = (plan: SIPPlan | undefined, userAddress?: string) =
     frequencyDays: Math.floor(Number(plan.frequency) / (24 * 3600)),
     isNative: plan.token === '0x0000000000000000000000000000000000000000',
     active: plan.active,
-    progress: Number(plan.executedAmount) / Number(plan.totalAmount) * 100,
-    canExecute: Date.now() >= Number(plan.nextExecution) * 1000,
-    canFinalize: Date.now() >= Number(plan.maturity) * 1000,
+    progress: Number(plan.totalAmount) > 0
+      ? (Number(plan.executedAmount) / Number(plan.totalAmount)) * 100
+      : 0,
+    canExecute: plan.active &&
+      Date.now() >= Number(plan.nextExecution) * 1000 &&
+      Date.now() < Number(plan.maturity) * 1000 &&
+      Number(plan.executedAmount) + Number(plan.amountPerInterval) <= Number(plan.totalAmount),
+    canFinalize: plan.active && Date.now() >= Number(plan.maturity) * 1000,
     poolName: plan.poolName,
     // Explorer links
     contractLink: getFujiTestnetLink('address', CONTRACT_ADDRESS),
@@ -677,10 +682,7 @@ export const formatMultipleSIPsData = (plans: SIPPlan[], userAddress?: string) =
 // Get total portfolio value across all SIPs
 export const getTotalPortfolioValue = (plans: SIPPlan[]) => {
   const total = plans.reduce((acc, plan) => {
-    if (plan.active) {
-      return acc + Number(formatEther(plan.totalAmount));
-    }
-    return acc;
+    return acc + Number(formatEther(plan.totalAmount));
   }, 0);
 
   return total.toFixed(4);
@@ -689,10 +691,7 @@ export const getTotalPortfolioValue = (plans: SIPPlan[]) => {
 // Get total executed amount across all SIPs
 export const getTotalExecutedAmount = (plans: SIPPlan[]) => {
   const total = plans.reduce((acc, plan) => {
-    if (plan.active) {
-      return acc + Number(formatEther(plan.executedAmount));
-    }
-    return acc;
+    return acc + Number(formatEther(plan.executedAmount));
   }, 0);
 
   return total.toFixed(4);
